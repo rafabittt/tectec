@@ -6,13 +6,21 @@ final class Settings {
     private let d = UserDefaults.standard
     init() {
         d.register(defaults: [
-            "enabled": true, "profile": SwitchInfo.defaultID, "volume": 0.7, "spatial": true, "headphones": false,
+            "enabled": true, "profile": SwitchInfo.defaultID, "spatial": true, "headphones": false,
             "pitch": true, "upSounds": true, "ignoreRepeats": true,
         ])
     }
     var enabled: Bool { get { d.bool(forKey: "enabled") } set { d.set(newValue, forKey: "enabled") } }
     var profile: String { get { d.string(forKey: "profile") ?? SwitchInfo.defaultID } set { d.set(newValue, forKey: "profile") } }
-    var volume: Float { get { d.float(forKey: "volume") } set { d.set(newValue, forKey: "volume") } }
+    /// Volume do TecTec (0…1 na escala em dB). Migra o "volume" linear da 1.0.0.
+    var volumeLevel: Float {
+        get {
+            if d.object(forKey: "volumeLevel") != nil { return d.float(forKey: "volumeLevel") }
+            if d.object(forKey: "volume") != nil { return Volume.level(fromLinear: d.float(forKey: "volume")) }
+            return Volume.unity
+        }
+        set { d.set(newValue, forKey: "volumeLevel") }
+    }
     var spatial: Bool { get { d.bool(forKey: "spatial") } set { d.set(newValue, forKey: "spatial") } }
     var headphones: Bool { get { d.bool(forKey: "headphones") } set { d.set(newValue, forKey: "headphones") } }
     var pitch: Bool { get { d.bool(forKey: "pitch") } set { d.set(newValue, forKey: "pitch") } }
@@ -37,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
         updateIcon()
 
-        sound.volume = settings.volume
+        sound.level = settings.volumeLevel
         sound.spatial = settings.spatial
         sound.headphones = settings.headphones
         sound.pitchVariation = settings.pitch
@@ -234,18 +242,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return mi
     }
 
+    private var volumeLabel: NSTextField?
+    private var lastVolumeTick = Date.distantPast
+
     private func volumeItem() -> NSMenuItem {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 28))
-        let low = NSImageView(frame: NSRect(x: 16, y: 6, width: 16, height: 16))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 30))
+        let low = NSImageView(frame: NSRect(x: 16, y: 7, width: 16, height: 16))
         low.image = NSImage(systemSymbolName: "speaker.fill", accessibilityDescription: nil)
         low.contentTintColor = .secondaryLabelColor
-        let high = NSImageView(frame: NSRect(x: 232, y: 6, width: 18, height: 16))
-        high.image = NSImage(systemSymbolName: "speaker.wave.3.fill", accessibilityDescription: nil)
-        high.contentTintColor = .secondaryLabelColor
-        let slider = NSSlider(value: Double(settings.volume), minValue: 0, maxValue: 1, target: self, action: #selector(volumeChanged(_:)))
-        slider.frame = NSRect(x: 38, y: 4, width: 188, height: 20)
+        let slider = NSSlider(value: Double(settings.volumeLevel), minValue: 0, maxValue: 1, target: self, action: #selector(volumeChanged(_:)))
+        slider.frame = NSRect(x: 38, y: 5, width: 172, height: 20)
         slider.isContinuous = true
-        view.addSubview(low); view.addSubview(slider); view.addSubview(high)
+        // marquinha no som original (100%)
+        slider.numberOfTickMarks = 4
+        slider.allowsTickMarkValuesOnly = false
+        slider.toolTip = "Volume do TecTec, separado do resto do Mac. 100% = som original; acima disso o TecTec reforça o som."
+        let label = NSTextField(labelWithString: "\(Volume.percent(settings.volumeLevel))%")
+        label.frame = NSRect(x: 214, y: 6, width: 52, height: 18)
+        label.alignment = .right
+        label.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
+        label.textColor = .secondaryLabelColor
+        volumeLabel = label
+        view.addSubview(low); view.addSubview(slider); view.addSubview(label)
         let mi = NSMenuItem()
         mi.view = view
         return mi
@@ -259,7 +277,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loadProfile(id, preview: true)
     }
     @objc private func preview() { playPreview() }
-    @objc private func volumeChanged(_ s: NSSlider) { settings.volume = s.floatValue; sound.volume = s.floatValue }
+    @objc private func volumeChanged(_ s: NSSlider) {
+        settings.volumeLevel = s.floatValue
+        sound.level = s.floatValue
+        volumeLabel?.stringValue = "\(Volume.percent(s.floatValue))%"
+        // um "tec" enquanto arrasta, para ouvir o nível na hora
+        if Date().timeIntervalSince(lastVolumeTick) > 0.12 {
+            lastVolumeTick = Date()
+            sound.play(keyCode: 40, isDown: true)
+        }
+    }
     @objc private func toggleSpatial() { settings.spatial.toggle(); sound.spatial = settings.spatial }
     @objc private func toggleHeadphones() { settings.headphones.toggle(); sound.headphones = settings.headphones }
     @objc private func togglePitch() { settings.pitch.toggle(); sound.pitchVariation = settings.pitch }
