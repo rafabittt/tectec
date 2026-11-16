@@ -7,7 +7,7 @@ final class Settings {
     init() {
         d.register(defaults: [
             "enabled": true, "profile": SwitchInfo.defaultID, "spatial": true, "headphones": false,
-            "pitch": true, "upSounds": true, "ignoreRepeats": true,
+            "pitch": true, "upSounds": true, "ignoreRepeats": true, "fixedVolume": true,
         ])
     }
     var enabled: Bool { get { d.bool(forKey: "enabled") } set { d.set(newValue, forKey: "enabled") } }
@@ -21,6 +21,13 @@ final class Settings {
         }
         set { d.set(newValue, forKey: "volumeLevel") }
     }
+    /// O TecTec compensa as mudanças no volume do Mac para soar sempre igual.
+    var fixedVolume: Bool { get { d.bool(forKey: "fixedVolume") } set { d.set(newValue, forKey: "fixedVolume") } }
+    /// Volume do Mac (dB) de referência: o TecTec soa como se o Mac estivesse sempre nesse volume.
+    var volumeAnchorDB: Float? {
+        get { d.object(forKey: "volumeAnchorDB") == nil ? nil : d.float(forKey: "volumeAnchorDB") }
+        set { if let v = newValue { d.set(v, forKey: "volumeAnchorDB") } else { d.removeObject(forKey: "volumeAnchorDB") } }
+    }
     var spatial: Bool { get { d.bool(forKey: "spatial") } set { d.set(newValue, forKey: "spatial") } }
     var headphones: Bool { get { d.bool(forKey: "headphones") } set { d.set(newValue, forKey: "headphones") } }
     var pitch: Bool { get { d.bool(forKey: "pitch") } set { d.set(newValue, forKey: "pitch") } }
@@ -32,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let settings = Settings()
     private let sound = SoundEngine()
     private let keys = KeyMonitor()
+    private let systemVolume = SystemVolume()
     private var statusItem: NSStatusItem!
     private var retryTimer: Timer?
     private var previewWork: [DispatchWorkItem] = []
@@ -46,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateIcon()
 
         sound.level = settings.volumeLevel
+        systemVolume.onChange = { [weak self] in self?.updateCompensation() }
+        systemVolume.onDeviceChange = { [weak self] in self?.resetVolumeAnchor() }
+        updateCompensation()
         sound.spatial = settings.spatial
         sound.headphones = settings.headphones
         sound.pitchVariation = settings.pitch
@@ -102,6 +113,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         img.accessibilityDescription = "TecTec"
         return img
     }()
+
+    // MARK: - Volume independente do Mac
+
+    /// Cancela a mudança do volume do Mac: se ele subiu 10 dB, o TecTec abaixa 10 dB (e vice-versa,
+    /// até o limite do reforço). Com o Mac no mudo não há o que fazer, então nada muda.
+    private func updateCompensation() {
+        guard settings.fixedVolume else { sound.compensationDB = 0; return }
+        guard let now = systemVolume.decibels else { return }
+        let anchor = settings.volumeAnchorDB ?? now
+        if settings.volumeAnchorDB == nil { settings.volumeAnchorDB = now }
+        sound.compensationDB = anchor - now
+    }
+
+    /// Volume de referência = o volume atual do Mac (o TecTec fica como está agora).
+    private func resetVolumeAnchor() {
+        settings.volumeAnchorDB = systemVolume.decibels
+        updateCompensation()
+    }
 
     // MARK: - Sons
 
@@ -214,6 +243,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let om = NSMenu()
         om.addItem(check("Áudio espacial (posição da tecla)", settings.spatial, #selector(toggleSpatial)))
         om.addItem(check("Modo fone de ouvido (HRTF imersivo)", settings.headphones, #selector(toggleHeadphones)))
+        let fixed = check("Volume fixo (ignora o volume do Mac)", settings.fixedVolume, #selector(toggleFixedVolume))
+        fixed.toolTip = "O TecTec compensa quando você muda o volume do Mac, e o teclado continua soando igual. Ajuste o volume dele pela barra acima."
+        om.addItem(fixed)
         om.addItem(check("Variação aleatória de tom", settings.pitch, #selector(togglePitch)))
         om.addItem(check("Som ao soltar a tecla", settings.upSounds, #selector(toggleUp)))
         om.addItem(check("Ignorar tecla segurada (repetição)", settings.ignoreRepeats, #selector(toggleRepeats)))
@@ -256,7 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // marquinha no som original (100%)
         slider.numberOfTickMarks = 4
         slider.allowsTickMarkValuesOnly = false
-        slider.toolTip = "Volume do TecTec, separado do resto do Mac. 100% = som original; acima disso o TecTec reforça o som."
+        slider.toolTip = "Volume do TecTec. 100% = som original; acima disso o TecTec reforça o som. Com “Volume fixo” ligado, mudar o volume do Mac não altera o TecTec."
         let label = NSTextField(labelWithString: "\(Volume.percent(settings.volumeLevel))%")
         label.frame = NSRect(x: 214, y: 6, width: 52, height: 18)
         label.alignment = .right
@@ -289,6 +321,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc private func toggleSpatial() { settings.spatial.toggle(); sound.spatial = settings.spatial }
     @objc private func toggleHeadphones() { settings.headphones.toggle(); sound.headphones = settings.headphones }
+    @objc private func toggleFixedVolume() {
+        settings.fixedVolume.toggle()
+        if settings.fixedVolume { resetVolumeAnchor() } else { updateCompensation() }
+    }
     @objc private func togglePitch() { settings.pitch.toggle(); sound.pitchVariation = settings.pitch }
     @objc private func toggleUp() { settings.upSounds.toggle() }
     @objc private func toggleRepeats() { settings.ignoreRepeats.toggle(); keys.ignoreRepeats = settings.ignoreRepeats }

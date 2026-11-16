@@ -54,6 +54,8 @@ final class SoundEngine {
     private var boosted = SoundBank()
     /// Posição do controle de volume, 0…1, numa escala em decibéis (ver `Volume`).
     var level: Float = Volume.unity { didSet { applyVolume() } }
+    /// Ajuste para cancelar mudanças no volume do Mac (dB). Positivo = o Mac abaixou, o TecTec reforça.
+    var compensationDB: Float = 0 { didSet { if compensationDB != oldValue { applyVolume() } } }
     var spatial = true
     var headphones = false { didSet { applyRendering() } }
     var pitchVariation = true
@@ -103,7 +105,9 @@ final class SoundEngine {
     /// Acima: aplica o ganho nas próprias gravações com saturação suave, que arredonda só os picos.
     /// (Um limitador comum achata o estalo da tecla e quase não deixa mais alto; medido.)
     private func applyVolume() {
-        guard let db = Volume.decibels(level) else { engine.mainMixerNode.outputVolume = 0; boosted = rawBank; return }
+        guard let user = Volume.decibels(level) else { engine.mainMixerNode.outputVolume = 0; boosted = rawBank; return }
+        // o reforço tem limite: abaixo dele o teclado também fica mais baixo
+        let db = min(user + compensationDB, Volume.maxDB)
         if db <= 0 {
             engine.mainMixerNode.outputVolume = pow(10, db / 20)
             boosted = rawBank
