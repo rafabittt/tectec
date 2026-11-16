@@ -8,9 +8,26 @@
 Fica na barra de menus e toca um som de switch mecânico a cada tecla.
 É uma versão própria, inspirada no funcionamento do [Klack](https://tryklack.com/). Os sons são **gravações reais de 13 switches** do projeto open source [kbsim](https://github.com/tplai/kbsim) (licença MIT, © Thomas Lai; ver `Resources/Switches/LICENSE-kbsim.txt`). Nenhum sample do Klack foi usado.
 
-## Rodar
+## Instalar
 
-Precisa do Xcode (ou das Command Line Tools) instalado.
+1. Baixe o **TecTec-x.y.z.dmg** em [Releases](https://github.com/rafabittt/tectec/releases/latest) e arraste o TecTec para Aplicativos.
+2. Abra o app. Um ícone com Ç aparece na barra de menus.
+3. O macOS pede a permissão **Monitoramento de Entrada**: ative o TecTec em
+   *Ajustes do Sistema → Privacidade e Segurança → Monitoramento de Entrada*.
+   Se o ícone continuar com ⚠️, use **Reiniciar TecTec** no menu.
+
+O app é assinado com Developer ID e notarizado pela Apple, então abre sem aviso de segurança.
+Requer macOS 13 ou mais recente; o binário é universal (Apple Silicon e Intel).
+
+### Atualizações
+
+O TecTec usa o [Sparkle](https://sparkle-project.org): verifica uma vez por dia se há versão nova
+(lendo o [`appcast.xml`](appcast.xml) deste repositório) e mostra a janela de atualização com as novidades.
+Também dá para verificar na hora em **Procurar atualizações…** no menu.
+
+## Compilar a partir do código
+
+Precisa do Xcode (ou das Command Line Tools).
 
 ```bash
 git clone https://github.com/rafabittt/tectec.git
@@ -18,14 +35,15 @@ cd tectec
 ./build.sh && open TecTec.app
 ```
 
-1. Um ícone de teclado aparece na barra de menus.
-2. O macOS pede a permissão **Monitoramento de Entrada**. Ative o TecTec em
-   *Ajustes do Sistema → Privacidade e Segurança → Monitoramento de Entrada*.
-3. Se o ícone continuar com "!", use **Reiniciar TecTec** no menu.
+O build local é assinado ad-hoc com um requisito fixo pelo identificador `br.tectec.app`, então recompilar
+não derruba a permissão. Se ela sumir mesmo assim, rode `tccutil reset ListenEvent br.tectec.app` e abra o app de novo.
 
-> O app é assinado localmente (ad-hoc) com um requisito fixo pelo identificador `br.tectec.app`, então recompilar não derruba a permissão. Se ela sumir mesmo assim, rode `tccutil reset ListenEvent br.tectec.app` e abra o app de novo.
+### Lançar uma versão (mantenedor)
 
-Requer macOS 13 ou mais recente. O binário é universal (Apple Silicon e Intel).
+1. Suba `VERSION` e `BUILD` em [`version.env`](version.env). O `BUILD` precisa sempre aumentar: é o que o Sparkle compara.
+2. Opcional: escreva as novidades em `dist/notes-<versão>.html`.
+3. Rode `tools/release.sh --publish`. Ele assina com Developer ID, notariza, gera o DMG, assina a atualização
+   (chave EdDSA no Keychain, conta `tectec`), cria o GitHub Release e faz push do `appcast.xml`.
 
 ## O que tem
 
@@ -64,6 +82,8 @@ Sources/TecTec/
   Switches.swift      catálogo dos switches e montagem do banco de sons
   Layout.swift        layout físico ABNT2 e mapa kVK → uiohook
   CustomPacks.swift   pacotes do usuário / Mechvibes
+tools/release.sh      release assinado + notarizado + appcast
+tools/appcast.py      adiciona a versão ao feed do Sparkle
 Resources/Switches/   gravações (kbsim, MIT)
 Resources/AppIcon.icns  ícone (gerado por scripts/make-icon.swift)
 ```
@@ -71,6 +91,7 @@ Resources/AppIcon.icns  ícone (gerado por scripts/make-icon.swift)
 ## Licença e créditos
 
 - Código: [MIT](LICENSE).
+- Atualizações: [Sparkle](https://github.com/sparkle-project/Sparkle) (MIT).
 - Sons dos switches: [kbsim](https://github.com/tplai/kbsim), © Thomas Lai, MIT ([cópia da licença](Resources/Switches/LICENSE-kbsim.txt)).
 - Nomes de switches (Cherry MX, Gateron, Kailh, NovelKeys, Topre etc.) são marcas dos seus donos e aparecem só para descrever o som. O TecTec não tem relação com o Klack nem com esses fabricantes.
 

@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import Sparkle
 
 final class Settings {
     private let d = UserDefaults.standard
@@ -26,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var retryTimer: Timer?
     private var previewWork: [DispatchWorkItem] = []
+    /// Atualizações via Sparkle: lê appcast.xml no GitHub e verifica sozinho (1x por dia).
+    private let updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -212,6 +215,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(opts)
 
         menu.addItem(.separator())
+        let upd = NSMenuItem(title: "Procurar atualizações…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+        upd.target = updater
+        menu.addItem(upd)
         menu.addItem(item("Sobre o TecTec", #selector(about)))
         menu.addItem(item("Sair", #selector(quit), key: "q"))
     }

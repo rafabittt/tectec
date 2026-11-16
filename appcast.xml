@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>TecTec</title>
+    <link>https://github.com/rafabittt/tectec</link>
+    <description>Atualizações do TecTec</description>
+    <language>pt-BR</language>
+    <item>
+      <title>TecTec 1.0.0</title>
+      <pubDate>Mon, 16 Nov 2026 13:23:07 GMT</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <sparkle:fullReleaseNotesLink>https://github.com/rafabittt/tectec/releases/tag/v1.0.0</sparkle:fullReleaseNotesLink>
+      <description><![CDATA[<h3>TecTec 1.0</h3>
+<ul>
+<li><b>13 switches mecânicos reais</b>: lineares (Cream, Black Ink, Red Ink, MX Black, Alpaca, Tealios), táteis (Holy Panda, MX Brown), clicky (MX Blue, Box Navy, Blue Alps) e clássicos (Buckling Spring, Topre).</li>
+<li><b>Feito para o ABNT2</b>: o som de cada tecla vem do lado certo, incluindo Ç, ~, ´ e /?.</li>
+<li>Atualizações automáticas: quando sair versão nova, o TecTec avisa.</li>
+</ul>
+]]></description>
+      <enclosure url="https://github.com/rafabittt/tectec/releases/download/v1.0.0/TecTec-1.0.0.dmg" length="1881534" type="application/octet-stream" sparkle:edSignature="U0W03Q2GaIE56yVaZaMbugfhF92blRSDeJ2+j8cmtB6AxnuHkV+qajtkP+IW2vfPrJo3+ZxQjaJq6osqK0w8Cw=="/>
+    </item>
+  </channel>
+</rss>
