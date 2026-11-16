@@ -4,3 +4,14 @@ TecTec.app/
 *.xcodeproj/
 .DS_Store
 dist/
+
+# Segredos: nunca commitar
+.env
+.env.*
+!.env.example
+
+# Gerações do Higgsfield (rascunhos e registro de gastos)
+site-src/generated/
+site-src/ledger.json
+
+.claude/

@@ -45,6 +45,16 @@ não derruba a permissão. Se ela sumir mesmo assim, rode `tccutil reset ListenE
 3. Rode `tools/release.sh --publish`. Ele assina com Developer ID, notariza, gera o DMG, assina a atualização
    (chave EdDSA no Keychain, conta `tectec`), cria o GitHub Release e faz push do `appcast.xml`.
 
+### Site (GitHub Pages)
+
+O site fica em `docs/` e é gerado por `python3 tools/site/build.py` (português na raiz, inglês em `/en/`).
+O teste interativo usa os mesmos sons do app, em `docs/sounds/`.
+
+As imagens foram geradas com o Higgsfield (`tools/hf.mjs`, com limite de gasto). Para gerar novas:
+copie `.env.example` para `.env`, cole sua chave da API e rode, por exemplo,
+`node tools/hf.mjs run higgsfield-ai/soul/v2/standard site-src/prompts/hero2.json site-src/generated/hero --ledger site-src/ledger.json --cap 1`.
+O `.env` nunca vai para o Git.
+
 ## O que tem
 
 - **13 switches reais**, agrupados por tipo:
